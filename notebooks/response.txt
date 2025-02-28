@@ -1,0 +1,7 @@
+I have a white cube, painted red on all sides. I cut it into 3x3x3 = 27 smaller cubes. Each of the smaller cubes has six sides, some red, some white. I put them in a bag and mix them well. Now while you are blindfolded, I pick take out a random cube and roll it like a die. You take of your blindfold and see that all five sides visible to you are white. The sixth side faces the table so you can not see it. What is the probabiltity that the sixth side is also white?
+Please Reason step by step, and put your final awnser within \boxed{}.<think>
+Okay, so I have this problem about a cube that's been painted and then cut into smaller cubes. Let me try to break it down step by step.
+
+First, the cube is white and painted red on all sides. So, it's a standard cube with all six faces red. Then, it's cut into a 3x3x3 cube, which means it's divided into 27 smaller cubes. Each of these smaller cubes is like a tiny cube with some red and some white faces, depending on their position in the original cube.
+
+Now, each of these 27 smaller cubes has six sides, some red, some white. The ones on the corners of the original cube will have three red faces, the ones on the edges (but not corners) will have two red faces, and the ones on the faces (but not edges or corners) will have one red face. The ones inside the cube, not on any face, will have no red faces at all

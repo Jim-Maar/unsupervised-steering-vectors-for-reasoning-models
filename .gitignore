@@ -1,0 +1,4 @@
+slurmout.log
+slurmlogs/
+src/__pycache__
+results/

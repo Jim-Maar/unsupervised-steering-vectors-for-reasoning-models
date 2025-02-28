@@ -13,13 +13,13 @@ def project_orthogonal_subspace(vec, learned_vectors, normalization):
     return result
 
 class SteeredModel():
-    def __init__(self, model, tokenizer, source_layer_idx=None, target_layer_idx=None, target_token_idxs=slice(None), layers_name=None, source_module_name=None, normalization=1.0, num_steps=300, power=2, q=None, orthogonal_vectors=False, target_module="residual"):
+    def __init__(self, model, tokenizer, source_layer_idx=None, target_layer_idx=None, target_token_idxs=slice(None), layers_name=None, source_module_name=None, normalization=1.0, num_steps=300, power=2, q=None, orthogonal_vectors=False, target_module="residual", lr=0.001):
         '''
         Note: this will mutate `model`
         '''
         self.model = model
         self.tokenizer = tokenizer
-            
+        self.lr = lr
         # determine layers object
         if layers_name is None:
             if hasattr(self.model, "transformer"):  # gpt-2-like
@@ -27,7 +27,7 @@ class SteeredModel():
             elif hasattr(self.model, "gpt_neox"): # pythia-like
                 self.layers_name = "gpt_neox.layers"
             elif hasattr(self.model, "model"):  # mistral-like
-                self.layers_name =  "model.model.layers"
+                self.layers_name =  "model.layers"
             else:
                 raise ValueError(f"don't know how to get layer list for {type(model)}")
         else:
@@ -84,7 +84,7 @@ class SteeredModel():
         pass
     
     
-    def train(self, examples, num_vectors):
+    def train(self, examples, num_vectors, more_tqdm=False):
         self.num_vectors = num_vectors
         self.learned_vectors = torch.zeros(self.num_vectors, self.width, device=self.model.device)
 
@@ -125,13 +125,19 @@ class SteeredModel():
                     )
                 else:
                     bias.data = normalization*nn.functional.normalize(torch.randn(self.width, device="cuda"), dim=0)
-                        
+
             # optimizer
             optimizer = optim.AdamW([bias],
-                                    lr=.001, betas=(.9,.98), weight_decay=0.0, amsgrad=True)
+                                    lr=self.lr, betas=(.9,.98), weight_decay=0.0, amsgrad=True)
             
             # training loop
-            for t in range(num_steps):
+
+            if more_tqdm:
+                pbar = tqdm.tqdm(range(num_steps))
+            else:
+                pbar = range(num_steps)
+
+            for t in pbar:
                 
                 # compute gradient
                 optimizer.zero_grad()
