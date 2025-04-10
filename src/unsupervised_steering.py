@@ -132,12 +132,12 @@ class SteeredModel():
             
             # training loop
 
-            if more_tqdm:
+            """if more_tqdm:
                 pbar = tqdm.tqdm(range(num_steps))
             else:
-                pbar = range(num_steps)
+                pbar = range(num_steps)"""
 
-            for t in pbar:
+            for t in range(num_steps):
                 
                 # compute gradient
                 optimizer.zero_grad()
@@ -203,3 +203,4 @@ class SteeredModel():
             with torch.no_grad():
                 self.bias.data = torch.zeros(self.bias.data.shape, device=self.model.device)
         pass
+    

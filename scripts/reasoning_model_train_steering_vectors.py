@@ -23,15 +23,15 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Run reasoning model and measure time')
     
     # Model selection
-    parser.add_argument('--model_size', type=int, default=1, choices=[1, 7, 14],
-                        help='Model size in billions (1, 7, or 14)')
+    parser.add_argument('--model', type=int, default="deepseek-llama-8b", choices=["deepseek-llama-8b"],
+                        help='Model name')
     
     # Other parameters
     parser.add_argument('--source_layer', type=int, default=None, help='Source layer')
     parser.add_argument('--target_layer', type=int, default=None, help='Target layer')
-    parser.add_argument('--normalization', type=float, default=12, help='Normalization value')
+    parser.add_argument('--normalization', type=float, default=1.0, help='Normalization value')
     parser.add_argument('--orthogonal_vectors', type=bool, default=True, help='Use orthogonal vectors')
-    parser.add_argument('--num_vectors', type=int, default=4, help='Number of vectors')
+    parser.add_argument('--num_vectors', type=int, default=40, help='Number of vectors')
     parser.add_argument('--token_idxs_start', type=int, default=-2, help='Start index for token slice')
     parser.add_argument('--token_idxs_end', type=int, default=None, help='End index for token slice')
     parser.add_argument('--num_steps', type=int, default=400, help='Number of steps')
@@ -43,16 +43,14 @@ def parse_args():
     parser.add_argument('--question', type=str, default="Whats 2 + 3?", help='Question to answer')
     parser.add_argument('--temperature', type=float, default=0.5, help='Temperature for generation')
     parser.add_argument('--do_sample', action='store_true', help='Whether to use sampling for generation')
-    parser.add_argument('--use_8bit', action='store_true', help='Whether to use 8-bit quantization')
-    parser.add_argument('--use_4bit', action='store_true', help='Whether to use 4-bit quantization')
-    parser.add_argument('--offload_buffers', action='store_true', help='Whether to offload buffers to CPU')
     
     return parser.parse_args()
 
-def get_model_name(model_size):
-    if model_size == 1:
-        return "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
-    return f"deepseek-ai/DeepSeek-R1-Distill-Qwen-{model_size}B"
+def get_model_name(model):
+    if model == "deepseek-llama-8b":
+        return "deepseek-ai/DeepSeek-R1-Distill-Llama-8B"
+    else:
+        raise ValueError(f"Model {model} not supported")
 
 def get_full_prompt(prompt):
     full_prompt = prompt + "\nPlease Reason step by step, and put your final awnser within \\boxed{}.<think>\n"
@@ -146,7 +144,7 @@ def main():
     args = parse_args()
     
     # Set parameters from arguments
-    MODEL_NAME = get_model_name(args.model_size)
+    MODEL_NAME = get_model_name(args.model)
     TOKENIZER_NAME = MODEL_NAME
     
     SOURCE_LAYER = args.source_layer
@@ -172,49 +170,11 @@ def main():
     print(f"Loading model: {MODEL_NAME}")
     tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_NAME, trust_remote_code=True)
     
-    # Configure quantization and offloading options
-    quantization_config = None
-    
-    # Only apply memory-saving options for larger models (7B and 14B)
-    if args.model_size >= 7:
-        if args.use_8bit:
-            print("Using 8-bit quantization")
-            quantization_config = BitsAndBytesConfig(
-                load_in_8bit=True,
-                llm_int8_threshold=6.0,
-            )
-        elif args.use_4bit:
-            print("Using 4-bit quantization")
-            quantization_config = BitsAndBytesConfig(
-                load_in_4bit=True,
-                bnb_4bit_compute_dtype=torch.float16,
-                bnb_4bit_use_double_quant=True,
-                bnb_4bit_quant_type="nf4",
-            )
-        
-        # Configure device map with offloading if needed
-        device_map = "auto"
-        if args.offload_buffers:
-            print("Using offload buffers")
-            device_map = {"": "cuda:0"}
-            
-        # Load the model with memory-saving configuration for larger models
-        model = AutoModelForCausalLM.from_pretrained(
-            MODEL_NAME,
-            device_map=device_map,
-            trust_remote_code=True,
-            quantization_config=quantization_config,
-            offload_buffers=args.offload_buffers,
-            torch_dtype=torch.float16,  # Use half precision
-        )
-    else:
-        # For smaller models, use standard loading without memory optimizations
-        print("Loading smaller model without memory optimizations")
-        model = AutoModelForCausalLM.from_pretrained(
-            MODEL_NAME,
-            device_map="auto",
-            trust_remote_code=True,
-        )
+    model = AutoModelForCausalLM.from_pretrained(
+        MODEL_NAME,
+        device_map="auto",
+        trust_remote_code=True,
+    )
     
     # Print memory usage information
     print(f"GPU memory allocated: {torch.cuda.memory_allocated() / 1024**2:.2f} MB")
